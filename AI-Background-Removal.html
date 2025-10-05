@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>AI Background Removal — Bright Blue & White Theme</title>
+  <style>
+    :root{
+      --blue:#0ea5ff; /* bright blue */
+      --blue-600:#0284c7;
+      --bg:#ffffff;
+      --muted:#6b7280;
+      --radius:14px;
+      font-family:Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:linear-gradient(180deg,#f8feff 0%, #ffffff 100%);color:#0f172a}
+
+    .app{
+      max-width:1100px;margin:28px auto;padding:20px;display:grid;grid-template-columns:1fr 420px;gap:20px;
+    }
+    header{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between}
+    header h1{margin:0;font-size:20px;color:var(--blue-600)}
+    header p{margin:0;color:var(--muted);font-size:13px}
+
+    .panel{background:var(--bg);border-radius:var(--radius);box-shadow:0 6px 30px rgba(2,132,199,0.08);padding:18px}
+
+    /* Left: canvas preview */
+    .preview{display:flex;flex-direction:column;gap:12px;align-items:center;justify-content:center;min-height:420px}
+    canvas{max-width:100%;border-radius:12px;display:block;box-shadow:0 10px 30px rgba(2,132,199,0.06)}
+    .meta{width:100%;display:flex;gap:12px;align-items:center;justify-content:space-between}
+
+    /* Right: controls */
+    .controls{display:flex;flex-direction:column;gap:12px}
+    .control-row{display:flex;gap:10px;align-items:center}
+    label.file{background:linear-gradient(90deg,var(--blue) 0%, var(--blue-600) 100%);color:white;padding:10px 14px;border-radius:10px;cursor:pointer;font-weight:600}
+    input[type=file]{display:none}
+
+    input[type=text],select,button{padding:10px 12px;border-radius:10px;border:1px solid #e6eef6;font-size:14px}
+    button.primary{background:var(--blue);color:white;border:none;padding:10px 14px;border-radius:10px;font-weight:700;cursor:pointer}
+    button.ghost{background:transparent;border:1px solid #e6eef6}
+
+    .small{font-size:13px;color:var(--muted)}
+    .bg-options{display:flex;gap:8px;flex-wrap:wrap}
+    .bg-chip{padding:8px 10px;border-radius:10px;border:1px solid #e6eef6;cursor:pointer}
+    .bg-chip.selected{box-shadow:0 6px 20px rgba(14,165,255,0.12);border-color:var(--blue)}
+
+    .progress{height:8px;background:#edf3fb;border-radius:8px;overflow:hidden}
+    .progress > i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--blue) 0%, #7dd3fc 100%)}
+
+    footer{grid-column:1/-1;text-align:center;color:var(--muted);font-size:13px;margin-top:6px}
+
+    @media (max-width:920px){
+      .app{grid-template-columns:1fr;padding:12px}
+      .preview{min-height:360px}
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div>
+        <h1>AI Background Removal</h1>
+        <p class="small">Upload a photo, remove its background with AI and replace it using a prompt, color or image.</p>
+      </div>
+      <div class="small">Bright Blue · Mobile + Desktop Responsive</div>
+    </header>
+
+    <section class="panel preview">
+      <div style="width:100%">
+        <canvas id="outputCanvas" width="1200" height="800"></canvas>
+      </div>
+      <div class="meta" style="width:100%">
+        <div class="small">Preview</div>
+        <div style="display:flex;gap:8px">
+          <button id="downloadBtn" class="primary" disabled>Download PNG</button>
+          <button id="resetBtn" class="ghost">Reset</button>
+        </div>
+      </div>
+      <div style="width:100%" class="small">Tip: For best results use photos with a clear subject. Model used: BodyPix (person/foreground segmentation).</div>
+    </section>
+
+    <aside class="panel controls">
+      <div class="control-row">
+        <label class="file">Upload Image<input id="fileInput" type="file" accept="image/*"></label>
+        <div style="flex:1">
+          <div id="modelStatus" class="small">Loading AI model...</div>
+          <div class="progress" style="margin-top:8px"><i id="modelProgress"></i></div>
+        </div>
+      </div>
+
+      <div>
+        <div class="small" style="margin-bottom:8px">Background options</div>
+        <div class="bg-options">
+          <div class="bg-chip" data-type="transparent">Transparent</div>
+          <div class="bg-chip" data-type="color" data-color="#ffffff">White</div>
+          <div class="bg-chip" data-type="color" data-color="#0ea5ff">Bright Blue</div>
+          <div class="bg-chip" data-type="image" id="uploadBgChip">Upload Bg</div>
+        </div>
+      </div>
+
+      <div>
+        <div class="small">Prompt generator — type a short prompt for the background and click Generate</div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <input id="promptInput" type="text" placeholder="e.g. tropical beach at sunset, soft bokeh" />
+          <button id="generateBtn" class="primary">Generate</button>
+        </div>
+        <div class="small" style="margin-top:8px">Generated backgrounds use a public image source (Unsplash). If you want a custom background, upload one using 'Upload Bg'.</div>
+      </div>
+
+      <div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button id="removeBtn" class="primary" disabled>Remove Background (AI)</button>
+          <button id="simpleBtn" class="ghost">Simple Remove</button>
+        </div>
+      </div>
+
+      <div style="margin-top:6px" class="small">Model info: BodyPix works best for human subjects but can provide a reasonable foreground mask for many photos.</div>
+
+      <input id="bgFileInput" type="file" accept="image/*" style="display:none">
+    </aside>
+
+    <footer class="small">Built with &lt;canvas&gt;, TensorFlow.js &amp; BodyPix · Unsplash Source for prompt backgrounds</footer>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.20.0/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/body-pix@2.0.5/dist/body-pix.min.js"></script>
+  <script>
+    // Elements
+    const fileInput = document.getElementById('fileInput');
+    const outputCanvas = document.getElementById('outputCanvas');
+    const ctx = outputCanvas.getContext('2d');
+    const removeBtn = document.getElementById('removeBtn');
+    const simpleBtn = document.getElementById('simpleBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const modelStatus = document.getElementById('modelStatus');
+    const modelProgress = document.getElementById('modelProgress');
+    const bgChips = document.querySelectorAll('.bg-chip');
+    const promptInput = document.getElementById('promptInput');
+    const generateBtn = document.getElementById('generateBtn');
+    const bgFileInput = document.getElementById('bgFileInput');
+    const uploadBgChip = document.getElementById('uploadBgChip');
+
+    let originalImage = null;
+    let bodyPixNet = null;
+    let selectedBg = {type:'transparent', color:'#ffffff', image: null};
+
+    function setProgress(p){ modelProgress.style.width = Math.round(p*100)+'%'; }
+
+    async function loadModel(){
+      try{
+        modelStatus.textContent = 'Loading AI model — this may take a few seconds';
+        setProgress(0.05);
+        bodyPixNet = await bodyPix.load({architecture: 'MobileNetV1', outputStride:16, multiplier:0.75, quantBytes:2});
+        setProgress(1);
+        modelStatus.textContent = 'Model loaded — ready';
+        removeBtn.disabled = false;
+      }catch(e){
+        console.error('Model load failed', e);
+        modelStatus.textContent = 'Model unavailable — AI remove disabled';
+        removeBtn.disabled = true;
+      }
+    }
+
+    // initialize
+    loadModel();
+
+    function resetCanvas(){
+      ctx.clearRect(0,0,outputCanvas.width,outputCanvas.height);
+      if(originalImage){
+        drawImageToCanvas(originalImage, outputCanvas, ctx);
+      }
+      downloadBtn.disabled = true;
+    }
+
+    function drawImageToCanvas(img, canvas, ctx){
+      // fit image inside canvas while preserving ratio
+      const maxW = canvas.width;
+      const maxH = canvas.height;
+      let iw = img.naturalWidth || img.width;
+      let ih = img.naturalHeight || img.height;
+      const scale = Math.min(maxW/iw, maxH/ih);
+      const w = iw * scale;
+      const h = ih * scale;
+      const x = (maxW - w)/2;
+      const y = (maxH - h)/2;
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      ctx.drawImage(img, x, y, w, h);
+    }
+
+    fileInput.addEventListener('change', (e)=>{
+      const f = e.target.files[0];
+      if(!f) return;
+      const img = new Image();
+      img.onload = ()=>{
+        originalImage = img;
+        drawImageToCanvas(img, outputCanvas, ctx);
+        downloadBtn.disabled = false;
+      }
+      img.src = URL.createObjectURL(f);
+    });
+
+    bgChips.forEach(chip=>{
+      chip.addEventListener('click', ()=>{
+        bgChips.forEach(c=>c.classList.remove('selected'));
+        chip.classList.add('selected');
+        const type = chip.dataset.type;
+        if(type === 'transparent') selectedBg = {type:'transparent', color: null, image: null};
+        else if(type === 'color') selectedBg = {type:'color', color: chip.dataset.color, image: null};
+        else if(type === 'image'){
+          // trigger upload
+          bgFileInput.click();
+        }
+      })
+    });
+
+    bgFileInput.addEventListener('change', (e)=>{
+      const f = e.target.files[0]; if(!f) return;
+      const img = new Image();
+      img.onload = ()=>{
+        selectedBg = {type:'image', image: img};
+        applyCurrentMask();
+      }
+      img.src = URL.createObjectURL(f);
+    });
+
+    // Generate background via prompt using Unsplash Source
+    generateBtn.addEventListener('click', ()=>{
+      const q = (promptInput.value||'').trim();
+      if(!q) return alert('Please enter a prompt like "tropical beach" or "soft bokeh"');
+      // Unsplash source with query (no API key). Adds timestamp to avoid caching.
+      const url = 'https://source.unsplash.com/1600x900/?' + encodeURIComponent(q) + '&' + Date.now();
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = ()=>{
+        selectedBg = {type:'image', image: img};
+        applyCurrentMask();
+      }
+      img.onerror = ()=>alert('Failed to load generated background. Try another prompt.');
+      img.src = url;
+    });
+
+    // AI remove background
+    removeBtn.addEventListener('click', async ()=>{
+      if(!originalImage) return alert('Please upload an image first');
+      if(!bodyPixNet) return alert('AI model not loaded');
+      modelStatus.textContent = 'Running segmentation...';
+      setProgress(0.1);
+      const segmentation = await bodyPixNet.segmentPerson(outputCanvas, {internalResolution: 'medium', segmentationThreshold: 0.7});
+      setProgress(0.6);
+      // create mask imageData
+      const mask = bodyPix.toMask(segmentation);
+      // draw original image to temp canvas to get correct placement
+      const temp = document.createElement('canvas'); temp.width = outputCanvas.width; temp.height = outputCanvas.height;
+      const tctx = temp.getContext('2d');
+      drawImageToCanvas(originalImage, temp, tctx);
+      const imgData = tctx.getImageData(0,0,temp.width,temp.height);
+      const maskData = mask.data;
+      // composite: where mask alpha == 0 -> background
+      const out = ctx.createImageData(temp.width,temp.height);
+      for(let i=0;i<imgData.data.length;i+=4){
+        const a = maskData[i+3]; // mask alpha
+        // if alpha > 128 -> keep subject
+        if(a > 128){
+          out.data[i] = imgData.data[i];
+          out.data[i+1] = imgData.data[i+1];
+          out.data[i+2] = imgData.data[i+2];
+          out.data[i+3] = 255;
+        }else{
+          // keep transparent for now
+          out.data[i] = 0; out.data[i+1]=0; out.data[i+2]=0; out.data[i+3]=0;
+        }
+      }
+      // draw background first
+      await drawBackgroundThenSubject(out);
+      modelStatus.textContent = 'Segmentation complete';
+      setProgress(1);
+      downloadBtn.disabled = false;
+    });
+
+    // Simple remove: naive threshold based on background color of corners
+    simpleBtn.addEventListener('click', ()=>{
+      if(!originalImage) return alert('Please upload an image first');
+      const temp = document.createElement('canvas'); temp.width = outputCanvas.width; temp.height = outputCanvas.height;
+      const tctx = temp.getContext('2d');
+      drawImageToCanvas(originalImage, temp, tctx);
+      const imgData = tctx.getImageData(0,0,temp.width,temp.height);
+      // sample corner color average
+      function sampleCorner(x,y,w,h){
+        const data = imgData.data; let r=0,g=0,b=0,c=0;
+        for(let yy=y; yy<y+h; yy+=5){
+          for(let xx=x; xx<x+w; xx+=5){
+            const idx = (yy*temp.width + xx)*4; r+=data[idx]; g+=data[idx+1]; b+=data[idx+2]; c++;
+          }
+        }
+        return [Math.round(r/c),Math.round(g/c),Math.round(b/c)];
+      }
+      const c1 = sampleCorner(0,0,40,40); // top-left
+      // simple distance threshold
+      const thresh = 60;
+      const out = ctx.createImageData(temp.width,temp.height);
+      for(let i=0;i<imgData.data.length;i+=4){
+        const dr = imgData.data[i]-c1[0];
+        const dg = imgData.data[i+1]-c1[1];
+        const db = imgData.data[i+2]-c1[2];
+        const dist = Math.sqrt(dr*dr+dg*dg+db*db);
+        if(dist > thresh){ // assume subject
+          out.data[i]=imgData.data[i]; out.data[i+1]=imgData.data[i+1]; out.data[i+2]=imgData.data[i+2]; out.data[i+3]=255;
+        }else{ out.data[i+3]=0; }
+      }
+      drawBackgroundThenSubject(out);
+      downloadBtn.disabled = false;
+    });
+
+    // draw background (selectedBg) then subject pixels from outImageData
+    async function drawBackgroundThenSubject(subjectImageData){
+      // clear
+      ctx.clearRect(0,0,outputCanvas.width,outputCanvas.height);
+      // draw background
+      if(selectedBg.type === 'transparent'){
+        // draw checkerboard
+        const s = 20; for(let y=0;y<outputCanvas.height;y+=s){
+          for(let x=0;x<outputCanvas.width;x+=s){
+            const isLight = ((x/s|0) + (y/s|0)) % 2 === 0;
+            ctx.fillStyle = isLight ? '#f0f7fb' : '#e1eff8';
+            ctx.fillRect(x,y,s,s);
+          }
+        }
+      } else if(selectedBg.type === 'color'){
+        ctx.fillStyle = selectedBg.color || '#ffffff';
+        ctx.fillRect(0,0,outputCanvas.width,outputCanvas.height);
+      } else if(selectedBg.type === 'image' && selectedBg.image){
+        // draw background image filling canvas with cover
+        const bg = selectedBg.image;
+        const iw = bg.naturalWidth || bg.width;
+        const ih = bg.naturalHeight || bg.height;
+        const scale = Math.max(outputCanvas.width/iw, outputCanvas.height/ih);
+        const w = iw*scale; const h = ih*scale; const x = (outputCanvas.width-w)/2; const y = (outputCanvas.height-h)/2;
+        ctx.drawImage(bg, x, y, w, h);
+      } else {
+        ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,outputCanvas.width,outputCanvas.height);
+      }
+      // draw subjectImageData on top
+      ctx.putImageData(subjectImageData, 0, 0);
+    }
+
+    // apply current mask re-render (if we already have subject alpha in canvas)
+    function applyCurrentMask(){
+      // if current canvas has non-empty image, we'll try to composite it again
+      // simply re-run remove if model exists
+      if(bodyPixNet && originalImage){ removeBtn.click(); }
+      else{ resetCanvas(); }
+    }
+
+    // reset
+    resetBtn.addEventListener('click', ()=>{
+      selectedBg = {type:'transparent', color:null, image:null};
+      bgChips.forEach(c=>c.classList.remove('selected'));
+      document.querySelector('.bg-chip[data-type="transparent"]').classList.add('selected');
+      resetCanvas();
+    });
+
+    // download
+    downloadBtn.addEventListener('click', ()=>{
+      const link = document.createElement('a');
+      link.download = 'edited-image.png';
+      link.href = outputCanvas.toDataURL('image/png');
+      link.click();
+    });
+
+    // set canvas size responsive to device while maintaining large internal resolution
+    function resizeCanvasToDisplaySize(){
+      const ratio = window.devicePixelRatio || 1;
+      const container = outputCanvas.parentElement;
+      const style = getComputedStyle(container);
+      const w = Math.min(1200, Math.max(400, container.clientWidth));
+      const h = Math.min(900, Math.max(300, Math.round(window.innerHeight * 0.45)));
+      outputCanvas.width = Math.round(w);
+      outputCanvas.height = Math.round(h);
+      // redraw original if exists
+      if(originalImage) drawImageToCanvas(originalImage, outputCanvas, ctx);
+    }
+    window.addEventListener('resize', ()=>{ resizeCanvasToDisplaySize(); });
+    resizeCanvasToDisplaySize();
+
+    // mark transparent chip selected by default
+    document.querySelector('.bg-chip[data-type="transparent"]').classList.add('selected');
+  </script>
+</body>
+</html>
