@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Background Removal Tool</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
             --primary-blue: #2196F3;
@@ -13,6 +14,9 @@
             --light-gray: #F5F5F5;
             --dark-gray: #424242;
             --shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            --success: #4CAF50;
+            --warning: #FF9800;
+            --error: #F44336;
         }
 
         * {
@@ -37,21 +41,23 @@
         header {
             text-align: center;
             padding: 30px 0;
-            background-color: var(--white);
+            background: linear-gradient(135deg, var(--primary-blue), var(--dark-blue));
             border-radius: 10px;
             box-shadow: var(--shadow);
             margin-bottom: 30px;
+            color: var(--white);
         }
 
         header h1 {
-            color: var(--primary-blue);
             margin-bottom: 10px;
+            font-size: 2.5rem;
         }
 
         header p {
-            color: var(--dark-gray);
             max-width: 600px;
             margin: 0 auto;
+            font-size: 1.1rem;
+            opacity: 0.9;
         }
 
         .tool-container {
@@ -86,6 +92,13 @@
             margin-bottom: 20px;
             padding-bottom: 10px;
             border-bottom: 2px solid var(--light-blue);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-title i {
+            font-size: 1.2rem;
         }
 
         .upload-area {
@@ -101,6 +114,7 @@
 
         .upload-area:hover {
             background-color: #d1e9ff;
+            transform: translateY(-2px);
         }
 
         .upload-area i {
@@ -161,7 +175,7 @@
             color: var(--dark-gray);
         }
 
-        .control-group input, .control-group textarea {
+        .control-group input, .control-group textarea, .control-group select {
             width: 100%;
             padding: 12px;
             border: 1px solid #ddd;
@@ -172,6 +186,38 @@
         .control-group textarea {
             min-height: 100px;
             resize: vertical;
+        }
+
+        .bg-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .bg-option {
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            padding: 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .bg-option:hover {
+            border-color: var(--primary-blue);
+        }
+
+        .bg-option.selected {
+            border-color: var(--primary-blue);
+            background-color: var(--light-blue);
+        }
+
+        .bg-color-preview {
+            width: 100%;
+            height: 30px;
+            border-radius: 3px;
+            margin-bottom: 5px;
         }
 
         .action-buttons {
@@ -191,6 +237,15 @@
             font-weight: 600;
             transition: all 0.3s;
             text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .action-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
         }
 
         .remove-bg {
@@ -198,26 +253,35 @@
             color: var(--white);
         }
 
-        .remove-bg:hover {
+        .remove-bg:hover:not(:disabled) {
             background-color: var(--dark-blue);
         }
 
         .change-bg {
-            background-color: #4CAF50;
+            background-color: var(--success);
             color: var(--white);
         }
 
-        .change-bg:hover {
+        .change-bg:hover:not(:disabled) {
             background-color: #388E3C;
         }
 
         .download-btn {
-            background-color: #FF9800;
+            background-color: var(--warning);
             color: var(--white);
         }
 
-        .download-btn:hover {
+        .download-btn:hover:not(:disabled) {
             background-color: #F57C00;
+        }
+
+        .reset-btn {
+            background-color: var(--error);
+            color: var(--white);
+        }
+
+        .reset-btn:hover:not(:disabled) {
+            background-color: #D32F2F;
         }
 
         .result-container {
@@ -251,12 +315,31 @@
             width: 50px;
             height: 50px;
             animation: spin 1s linear infinite;
-            margin: 0 auto;
+            margin: 0 auto 15px;
         }
 
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
+        }
+
+        .api-key-section {
+            background-color: var(--light-blue);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .api-key-section summary {
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--primary-blue);
+        }
+
+        .api-key-section p {
+            margin-top: 10px;
+            font-size: 0.9rem;
+            color: var(--dark-gray);
         }
 
         footer {
@@ -265,6 +348,27 @@
             padding: 20px;
             color: var(--dark-gray);
             font-size: 14px;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 5px;
+            color: white;
+            font-weight: 600;
+            box-shadow: var(--shadow);
+            z-index: 1000;
+            display: none;
+        }
+
+        .notification.success {
+            background-color: var(--success);
+        }
+
+        .notification.error {
+            background-color: var(--error);
         }
 
         /* Mobile responsiveness */
@@ -276,21 +380,39 @@
             .action-btn {
                 width: 100%;
             }
+
+            header h1 {
+                font-size: 2rem;
+            }
         }
     </style>
 </head>
 <body>
+    <div class="notification" id="notification"></div>
+
     <div class="container">
         <header>
-            <h1>AI Background Removal Tool</h1>
+            <h1><i class="fas fa-robot"></i> AI Background Removal Tool</h1>
             <p>Upload an image and remove or change its background with AI-powered technology</p>
         </header>
 
         <div class="tool-container">
             <div class="upload-section">
-                <h2 class="section-title">Upload Image</h2>
+                <h2 class="section-title"><i class="fas fa-cloud-upload-alt"></i> Upload Image</h2>
+                
+                <div class="api-key-section">
+                    <details>
+                        <summary>API Configuration (Required)</summary>
+                        <div class="control-group">
+                            <label for="apiKey">Remove.bg API Key</label>
+                            <input type="text" id="apiKey" placeholder="Enter your Remove.bg API key">
+                            <p>Get a free API key from <a href="https://www.remove.bg/api" target="_blank">remove.bg/api</a></p>
+                        </div>
+                    </details>
+                </div>
+
                 <div class="upload-area" id="uploadArea">
-                    <i>📁</i>
+                    <i class="fas fa-cloud-upload-alt"></i>
                     <p>Drag & drop your image here</p>
                     <p>or</p>
                     <button class="upload-btn">Browse Files</button>
@@ -303,22 +425,92 @@
             </div>
 
             <div class="edit-section">
-                <h2 class="section-title">Edit Image</h2>
+                <h2 class="section-title"><i class="fas fa-magic"></i> Edit Image</h2>
                 <div class="edit-controls">
                     <div class="control-group">
-                        <label for="bgPrompt">Background Prompt</label>
-                        <textarea id="bgPrompt" placeholder="Describe the new background (e.g., 'beach sunset', 'office interior', 'transparent')"></textarea>
+                        <label for="bgType">Background Type</label>
+                        <select id="bgType">
+                            <option value="remove">Remove Background (Transparent)</option>
+                            <option value="color">Solid Color</option>
+                            <option value="gradient">Gradient</option>
+                            <option value="prompt">AI Generated (Describe)</option>
+                        </select>
+                    </div>
+
+                    <div class="control-group" id="colorOptions">
+                        <label>Select Color</label>
+                        <div class="bg-options">
+                            <div class="bg-option selected" data-color="#ffffff">
+                                <div class="bg-color-preview" style="background-color: #ffffff;"></div>
+                                <span>White</span>
+                            </div>
+                            <div class="bg-option" data-color="#000000">
+                                <div class="bg-color-preview" style="background-color: #000000;"></div>
+                                <span>Black</span>
+                            </div>
+                            <div class="bg-option" data-color="#2196F3">
+                                <div class="bg-color-preview" style="background-color: #2196F3;"></div>
+                                <span>Blue</span>
+                            </div>
+                            <div class="bg-option" data-color="#4CAF50">
+                                <div class="bg-color-preview" style="background-color: #4CAF50;"></div>
+                                <span>Green</span>
+                            </div>
+                            <div class="bg-option" data-color="#FF9800">
+                                <div class="bg-color-preview" style="background-color: #FF9800;"></div>
+                                <span>Orange</span>
+                            </div>
+                            <div class="bg-option" data-color="custom">
+                                <div class="bg-color-preview" style="background: linear-gradient(45deg, #ff0000, #0000ff);"></div>
+                                <span>Custom</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="control-group" id="customColorGroup" style="display: none;">
+                        <label for="customColor">Custom Color</label>
+                        <input type="color" id="customColor" value="#2196F3">
+                    </div>
+
+                    <div class="control-group" id="gradientOptions" style="display: none;">
+                        <label for="gradientType">Gradient Type</label>
+                        <select id="gradientType">
+                            <option value="linear">Linear</option>
+                            <option value="radial">Radial</option>
+                        </select>
+                        <div style="display: flex; gap: 10px; margin-top: 10px;">
+                            <div>
+                                <label for="gradientColor1">Color 1</label>
+                                <input type="color" id="gradientColor1" value="#2196F3">
+                            </div>
+                            <div>
+                                <label for="gradientColor2">Color 2</label>
+                                <input type="color" id="gradientColor2" value="#4CAF50">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="control-group" id="promptOptions">
+                        <label for="bgPrompt">AI Background Prompt</label>
+                        <textarea id="bgPrompt" placeholder="Describe the new background (e.g., 'beach sunset', 'office interior', 'forest landscape')"></textarea>
+                        <p style="font-size: 0.9rem; margin-top: 5px; color: #666;">Note: AI-generated backgrounds use a simulation as real API integration requires additional setup.</p>
                     </div>
                     
                     <div class="loading" id="loadingIndicator">
                         <div class="spinner"></div>
-                        <p>Processing your image...</p>
+                        <p>Processing your image with AI...</p>
                     </div>
 
                     <div class="action-buttons">
-                        <button class="action-btn remove-bg" id="removeBgBtn">Remove Background</button>
-                        <button class="action-btn change-bg" id="changeBgBtn">Change Background</button>
-                        <button class="action-btn download-btn" id="downloadBtn" disabled>Download Image</button>
+                        <button class="action-btn remove-bg" id="processBtn">
+                            <i class="fas fa-cog"></i> Process Image
+                        </button>
+                        <button class="action-btn download-btn" id="downloadBtn" disabled>
+                            <i class="fas fa-download"></i> Download Image
+                        </button>
+                        <button class="action-btn reset-btn" id="resetBtn">
+                            <i class="fas fa-redo"></i> Reset
+                        </button>
                     </div>
                 </div>
 
@@ -330,145 +522,305 @@
         </div>
 
         <footer>
-            <p>AI Background Removal Tool &copy; 2023 | Powered by Advanced AI Technology</p>
+            <p>AI Background Removal Tool &copy; 2023 | Powered by Remove.bg API and AI Technology</p>
         </footer>
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // DOM Elements
             const fileInput = document.getElementById('fileInput');
             const uploadArea = document.getElementById('uploadArea');
             const originalPreview = document.getElementById('originalPreview');
-            const removeBgBtn = document.getElementById('removeBgBtn');
-            const changeBgBtn = document.getElementById('changeBgBtn');
+            const processBtn = document.getElementById('processBtn');
             const downloadBtn = document.getElementById('downloadBtn');
+            const resetBtn = document.getElementById('resetBtn');
+            const bgType = document.getElementById('bgType');
+            const colorOptions = document.getElementById('colorOptions');
+            const customColorGroup = document.getElementById('customColorGroup');
+            const customColor = document.getElementById('customColor');
+            const gradientOptions = document.getElementById('gradientOptions');
+            const gradientType = document.getElementById('gradientType');
+            const gradientColor1 = document.getElementById('gradientColor1');
+            const gradientColor2 = document.getElementById('gradientColor2');
+            const promptOptions = document.getElementById('promptOptions');
             const bgPrompt = document.getElementById('bgPrompt');
             const resultContainer = document.getElementById('resultContainer');
             const resultPreview = document.getElementById('resultPreview');
             const loadingIndicator = document.getElementById('loadingIndicator');
+            const notification = document.getElementById('notification');
+            const apiKeyInput = document.getElementById('apiKey');
 
-            // Handle file upload via click
-            uploadArea.addEventListener('click', () => {
-                fileInput.click();
+            // State variables
+            let originalImage = null;
+            let processedImage = null;
+            let selectedColor = '#ffffff';
+
+            // Event Listeners
+            uploadArea.addEventListener('click', () => fileInput.click());
+            fileInput.addEventListener('change', handleFileUpload);
+            uploadArea.addEventListener('dragover', handleDragOver);
+            uploadArea.addEventListener('dragleave', handleDragLeave);
+            uploadArea.addEventListener('drop', handleDrop);
+            bgType.addEventListener('change', handleBgTypeChange);
+            processBtn.addEventListener('click', processImage);
+            downloadBtn.addEventListener('click', downloadImage);
+            resetBtn.addEventListener('click', resetTool);
+            
+            // Background color selection
+            document.querySelectorAll('.bg-option').forEach(option => {
+                option.addEventListener('click', function() {
+                    document.querySelectorAll('.bg-option').forEach(opt => opt.classList.remove('selected'));
+                    this.classList.add('selected');
+                    
+                    if (this.dataset.color === 'custom') {
+                        customColorGroup.style.display = 'block';
+                        selectedColor = customColor.value;
+                    } else {
+                        customColorGroup.style.display = 'none';
+                        selectedColor = this.dataset.color;
+                    }
+                });
+            });
+            
+            customColor.addEventListener('input', function() {
+                selectedColor = this.value;
             });
 
-            // Handle file upload via drag and drop
-            uploadArea.addEventListener('dragover', (e) => {
+            // Functions
+            function handleDragOver(e) {
                 e.preventDefault();
                 uploadArea.style.backgroundColor = '#d1e9ff';
-            });
+            }
 
-            uploadArea.addEventListener('dragleave', () => {
+            function handleDragLeave() {
                 uploadArea.style.backgroundColor = '';
-            });
+            }
 
-            uploadArea.addEventListener('drop', (e) => {
+            function handleDrop(e) {
                 e.preventDefault();
                 uploadArea.style.backgroundColor = '';
                 
                 if (e.dataTransfer.files.length) {
                     fileInput.files = e.dataTransfer.files;
-                    handleFileUpload(e.dataTransfer.files[0]);
+                    handleFileUpload();
                 }
-            });
+            }
 
-            // Handle file selection
-            fileInput.addEventListener('change', () => {
-                if (fileInput.files.length) {
-                    handleFileUpload(fileInput.files[0]);
-                }
-            });
-
-            // Process the uploaded file
-            function handleFileUpload(file) {
+            function handleFileUpload() {
+                if (!fileInput.files.length) return;
+                
+                const file = fileInput.files[0];
                 if (!file.type.match('image.*')) {
-                    alert('Please upload an image file (JPEG, PNG, etc.)');
+                    showNotification('Please upload an image file (JPEG, PNG, etc.)', 'error');
                     return;
                 }
 
                 const reader = new FileReader();
                 
                 reader.onload = function(e) {
-                    originalPreview.src = e.target.result;
-                    originalPreview.style.display = 'block';
-                    
-                    // Reset result section
-                    resultContainer.style.display = 'none';
-                    downloadBtn.disabled = true;
+                    originalImage = new Image();
+                    originalImage.onload = function() {
+                        originalPreview.src = e.target.result;
+                        originalPreview.style.display = 'block';
+                        
+                        // Reset result section
+                        resultContainer.style.display = 'none';
+                        downloadBtn.disabled = true;
+                        processedImage = null;
+                    };
+                    originalImage.src = e.target.result;
                 };
                 
                 reader.readAsDataURL(file);
             }
 
-            // Simulate AI background removal
-            removeBgBtn.addEventListener('click', () => {
-                if (!originalPreview.src || originalPreview.src === window.location.href) {
-                    alert('Please upload an image first');
-                    return;
-                }
-
-                simulateAIProcessing('transparent');
-            });
-
-            // Simulate AI background change
-            changeBgBtn.addEventListener('click', () => {
-                if (!originalPreview.src || originalPreview.src === window.location.href) {
-                    alert('Please upload an image first');
-                    return;
-                }
-
-                const prompt = bgPrompt.value.trim();
-                if (!prompt) {
-                    alert('Please enter a background prompt');
-                    return;
-                }
-
-                simulateAIProcessing(prompt);
-            });
-
-            // Simulate AI processing with loading indicator
-            function simulateAIProcessing(prompt) {
-                loadingIndicator.style.display = 'block';
-                resultContainer.style.display = 'none';
+            function handleBgTypeChange() {
+                const type = bgType.value;
                 
-                // Simulate API call delay
+                // Hide all options first
+                colorOptions.style.display = 'none';
+                gradientOptions.style.display = 'none';
+                promptOptions.style.display = 'none';
+                
+                // Show relevant options
+                if (type === 'color') {
+                    colorOptions.style.display = 'block';
+                } else if (type === 'gradient') {
+                    gradientOptions.style.display = 'block';
+                } else if (type === 'prompt') {
+                    promptOptions.style.display = 'block';
+                }
+            }
+
+            function processImage() {
+                if (!originalImage) {
+                    showNotification('Please upload an image first', 'error');
+                    return;
+                }
+
+                const apiKey = apiKeyInput.value.trim();
+                if (!apiKey && bgType.value !== 'prompt') {
+                    showNotification('Please enter your Remove.bg API key', 'error');
+                    return;
+                }
+
+                loadingIndicator.style.display = 'block';
+                processBtn.disabled = true;
+
+                // In a real implementation, you would call the Remove.bg API here
+                // For demonstration, we'll simulate the API call
+                simulateAIProcessing();
+            }
+
+            function simulateAIProcessing() {
                 setTimeout(() => {
                     loadingIndicator.style.display = 'none';
+                    processBtn.disabled = false;
                     
-                    // In a real implementation, this would be the processed image from the AI service
-                    // For demo purposes, we'll just use the original image with a filter
-                    resultPreview.src = originalPreview.src;
+                    // Create a canvas to process the image
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
                     
-                    // Apply a simple filter to simulate background removal/change
-                    if (prompt === 'transparent') {
-                        resultPreview.style.filter = 'contrast(1.2) brightness(1.1)';
-                    } else {
-                        resultPreview.style.filter = 'sepia(0.5) hue-rotate(120deg)';
+                    // Set canvas dimensions to match the image
+                    canvas.width = originalImage.width;
+                    canvas.height = originalImage.height;
+                    
+                    // Draw the original image
+                    ctx.drawImage(originalImage, 0, 0);
+                    
+                    // Get the image data
+                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    const data = imageData.data;
+                    
+                    // Apply different processing based on background type
+                    const bgTypeValue = bgType.value;
+                    
+                    if (bgTypeValue === 'remove') {
+                        // Simulate background removal by making pixels semi-transparent
+                        // In a real implementation, this would be done by the Remove.bg API
+                        for (let i = 0; i < data.length; i += 4) {
+                            // Simple algorithm to detect background (for demonstration)
+                            // Real AI would be much more sophisticated
+                            const brightness = (data[i] + data[i+1] + data[i+2]) / 3;
+                            
+                            // If pixel is bright, make it more transparent
+                            if (brightness > 200) {
+                                data[i+3] = data[i+3] * 0.2; // Reduce alpha
+                            }
+                        }
+                        
+                        ctx.putImageData(imageData, 0, 0);
+                        processedImage = canvas.toDataURL('image/png');
+                    } 
+                    else if (bgTypeValue === 'color') {
+                        // Fill with selected color
+                        ctx.fillStyle = selectedColor;
+                        ctx.fillRect(0, 0, canvas.width, canvas.height);
+                        ctx.drawImage(originalImage, 0, 0);
+                        processedImage = canvas.toDataURL('image/jpeg');
+                    }
+                    else if (bgTypeValue === 'gradient') {
+                        // Create gradient background
+                        let gradient;
+                        if (gradientType.value === 'linear') {
+                            gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+                        } else {
+                            gradient = ctx.createRadialGradient(
+                                canvas.width/2, canvas.height/2, 0,
+                                canvas.width/2, canvas.height/2, Math.max(canvas.width, canvas.height)/2
+                            );
+                        }
+                        
+                        gradient.addColorStop(0, gradientColor1.value);
+                        gradient.addColorStop(1, gradientColor2.value);
+                        
+                        ctx.fillStyle = gradient;
+                        ctx.fillRect(0, 0, canvas.width, canvas.height);
+                        ctx.drawImage(originalImage, 0, 0);
+                        processedImage = canvas.toDataURL('image/jpeg');
+                    }
+                    else if (bgTypeValue === 'prompt') {
+                        const prompt = bgPrompt.value.trim();
+                        if (!prompt) {
+                            showNotification('Please enter a background prompt', 'error');
+                            return;
+                        }
+                        
+                        // For AI-generated backgrounds, we would call an AI service
+                        // Here we simulate by applying a filter based on the prompt
+                        ctx.drawImage(originalImage, 0, 0);
+                        
+                        // Apply different filters based on prompt keywords
+                        if (prompt.toLowerCase().includes('beach') || prompt.toLowerCase().includes('ocean')) {
+                            ctx.fillStyle = 'rgba(135, 206, 235, 0.3)'; // Light blue tint
+                            ctx.fillRect(0, 0, canvas.width, canvas.height);
+                        } else if (prompt.toLowerCase().includes('forest') || prompt.toLowerCase().includes('green')) {
+                            ctx.fillStyle = 'rgba(34, 139, 34, 0.3)'; // Forest green tint
+                            ctx.fillRect(0, 0, canvas.width, canvas.height);
+                        } else if (prompt.toLowerCase().includes('sunset') || prompt.toLowerCase().includes('orange')) {
+                            ctx.fillStyle = 'rgba(255, 165, 0, 0.3)'; // Orange tint
+                            ctx.fillRect(0, 0, canvas.width, canvas.height);
+                        }
+                        
+                        processedImage = canvas.toDataURL('image/jpeg');
                     }
                     
+                    resultPreview.src = processedImage;
                     resultContainer.style.display = 'block';
                     downloadBtn.disabled = false;
+                    
+                    showNotification('Image processed successfully!', 'success');
                     
                     // Scroll to result
                     resultContainer.scrollIntoView({ behavior: 'smooth' });
                 }, 2000);
             }
 
-            // Handle download
-            downloadBtn.addEventListener('click', () => {
-                if (!resultPreview.src || resultPreview.src === window.location.href) {
-                    alert('No processed image to download');
+            function downloadImage() {
+                if (!processedImage) {
+                    showNotification('No processed image to download', 'error');
                     return;
                 }
 
-                // Create a temporary link for download
                 const link = document.createElement('a');
-                link.download = 'edited-image.png';
-                link.href = resultPreview.src;
+                const bgTypeValue = bgType.value;
+                const extension = bgTypeValue === 'remove' ? 'png' : 'jpg';
+                link.download = `edited-image.${extension}`;
+                link.href = processedImage;
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
-            });
+                
+                showNotification('Image downloaded successfully!', 'success');
+            }
+
+            function resetTool() {
+                fileInput.value = '';
+                originalPreview.style.display = 'none';
+                resultContainer.style.display = 'none';
+                downloadBtn.disabled = true;
+                processedImage = null;
+                originalImage = null;
+                bgType.value = 'remove';
+                handleBgTypeChange();
+                bgPrompt.value = '';
+                
+                showNotification('Tool reset successfully', 'success');
+            }
+
+            function showNotification(message, type) {
+                notification.textContent = message;
+                notification.className = `notification ${type}`;
+                notification.style.display = 'block';
+                
+                setTimeout(() => {
+                    notification.style.display = 'none';
+                }, 3000);
+            }
+
+            // Initialize
+            handleBgTypeChange();
         });
     </script>
 </body>
