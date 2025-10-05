@@ -1,387 +1,760 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>AI Background Removal — Bright Blue & White Theme</title>
-  <style>
-    :root{
-      --blue:#0ea5ff; /* bright blue */
-      --blue-600:#0284c7;
-      --bg:#ffffff;
-      --muted:#6b7280;
-      --radius:14px;
-      font-family:Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
-    }
-    *{box-sizing:border-box}
-    body{margin:0;background:linear-gradient(180deg,#f8feff 0%, #ffffff 100%);color:#0f172a}
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>AI Background Removal — Bright Blue Theme</title>
+<style>
+  :root{
+    --blue:#0ea5ff; /* bright blue */
+    --blue-600:#0284c7;
+    --bg:#ffffff;
+    --muted:#6b7280;
+    --radius:14px;
+    --glass: rgba(255,255,255,0.85);
+    --max-w:1000px;
+  }
+  *{box-sizing:border-box}
+  body{
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    margin:0;
+    background:linear-gradient(180deg,#f8fbff 0%, #ffffff 100%);
+    color:#0f172a;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:28px;
+    min-height:100vh;
+  }
+  .card{
+    width:100%;
+    max-width:var(--max-w);
+    background:var(--glass);
+    border-radius:20px;
+    box-shadow: 0 8px 30px rgba(2,6,23,0.08);
+    padding:20px;
+    backdrop-filter: blur(6px);
+  }
+  .header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    margin-bottom:14px;
+  }
+  .title{
+    display:flex;
+    gap:12px;
+    align-items:center;
+  }
+  .logo{
+    height:46px;
+    width:46px;
+    border-radius:12px;
+    background:linear-gradient(135deg,var(--blue),var(--blue-600));
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:white;
+    font-weight:700;
+    font-size:18px;
+    box-shadow: 0 6px 18px rgba(14,165,255,0.24);
+  }
+  h1{font-size:18px;margin:0}
+  p.lead{margin:0;color:var(--muted);font-size:13px}
+  .controls{
+    display:flex;
+    gap:10px;
+    align-items:center;
+    flex-wrap:wrap;
+  }
+  .btn{
+    background:var(--blue);
+    color:white;
+    padding:10px 14px;
+    border-radius:10px;
+    border:none;
+    cursor:pointer;
+    font-weight:600;
+    box-shadow: 0 6px 18px rgba(14,165,255,0.18);
+  }
+  .btn.secondary{
+    background:transparent;
+    color:var(--blue-600);
+    border:1px solid rgba(2,132,199,0.12);
+    box-shadow:none;
+  }
+  .layout{
+    display:grid;
+    grid-template-columns: 1fr 420px;
+    gap:18px;
+  }
+  @media(max-width:980px){
+    .layout{grid-template-columns:1fr; padding-bottom:8px;}
+  }
 
-    .app{
-      max-width:1100px;margin:28px auto;padding:20px;display:grid;grid-template-columns:1fr 420px;gap:20px;
-    }
-    header{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between}
-    header h1{margin:0;font-size:20px;color:var(--blue-600)}
-    header p{margin:0;color:var(--muted);font-size:13px}
+  /* left panel - editor */
+  .panel{
+    background:white;
+    border-radius:12px;
+    padding:12px;
+    min-height:360px;
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+  }
+  .dropzone{
+    border:2px dashed rgba(14,165,255,0.18);
+    height:260px;
+    border-radius:10px;
+    display:flex;
+    gap:12px;
+    align-items:center;
+    justify-content:center;
+    flex-direction:column;
+    padding:12px;
+  }
+  .dropzone.dragover{background:rgba(14,165,255,0.03);border-color:var(--blue-600)}
+  .thumbs{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    align-items:center;
+  }
+  .thumb{
+    border-radius:8px;
+    overflow:hidden;
+    width:120px;
+    height:80px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:#f3f4f6;
+  }
+  .meta{
+    font-size:13px;color:var(--muted);
+  }
+  .options{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    align-items:center;
+  }
 
-    .panel{background:var(--bg);border-radius:var(--radius);box-shadow:0 6px 30px rgba(2,132,199,0.08);padding:18px}
-
-    /* Left: canvas preview */
-    .preview{display:flex;flex-direction:column;gap:12px;align-items:center;justify-content:center;min-height:420px}
-    canvas{max-width:100%;border-radius:12px;display:block;box-shadow:0 10px 30px rgba(2,132,199,0.06)}
-    .meta{width:100%;display:flex;gap:12px;align-items:center;justify-content:space-between}
-
-    /* Right: controls */
-    .controls{display:flex;flex-direction:column;gap:12px}
-    .control-row{display:flex;gap:10px;align-items:center}
-    label.file{background:linear-gradient(90deg,var(--blue) 0%, var(--blue-600) 100%);color:white;padding:10px 14px;border-radius:10px;cursor:pointer;font-weight:600}
-    input[type=file]{display:none}
-
-    input[type=text],select,button{padding:10px 12px;border-radius:10px;border:1px solid #e6eef6;font-size:14px}
-    button.primary{background:var(--blue);color:white;border:none;padding:10px 14px;border-radius:10px;font-weight:700;cursor:pointer}
-    button.ghost{background:transparent;border:1px solid #e6eef6}
-
-    .small{font-size:13px;color:var(--muted)}
-    .bg-options{display:flex;gap:8px;flex-wrap:wrap}
-    .bg-chip{padding:8px 10px;border-radius:10px;border:1px solid #e6eef6;cursor:pointer}
-    .bg-chip.selected{box-shadow:0 6px 20px rgba(14,165,255,0.12);border-color:var(--blue)}
-
-    .progress{height:8px;background:#edf3fb;border-radius:8px;overflow:hidden}
-    .progress > i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--blue) 0%, #7dd3fc 100%)}
-
-    footer{grid-column:1/-1;text-align:center;color:var(--muted);font-size:13px;margin-top:6px}
-
-    @media (max-width:920px){
-      .app{grid-template-columns:1fr;padding:12px}
-      .preview{min-height:360px}
-    }
-  </style>
+  /* right panel - preview */
+  .preview-panel{
+    background:white;
+    border-radius:12px;
+    padding:12px;
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+    min-height:360px;
+  }
+  .preview{
+    border-radius:10px;
+    border:1px solid #eef2ff;
+    min-height:260px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    position:relative;
+    overflow:hidden;
+    background:linear-gradient(45deg,#f8faff, #ffffff);
+  }
+  .canvas{
+    max-width:100%;
+    max-height:100%;
+    display:block;
+    user-select:none;
+  }
+  .controls-row{
+    display:flex;
+    gap:8px;
+    align-items:center;
+    justify-content:space-between;
+  }
+  .input, textarea, select{
+    padding:10px;
+    border-radius:8px;
+    border:1px solid #e6eef8;
+    font-size:14px;
+    min-width:0;
+  }
+  textarea{min-height:64px;resize:vertical}
+  .small{font-size:13px;color:var(--muted)}
+  .flex{display:flex;gap:8px;align-items:center;}
+  .color-picker{height:38px;padding:0 10px;display:flex;gap:8px;align-items:center}
+  .bg-samples{display:flex;gap:8px;align-items:center}
+  .sample{
+    width:34px;height:34px;border-radius:8px;border:1px solid #e6eef8;cursor:pointer;
+  }
+  .footer{
+    display:flex;
+    gap:8px;
+    justify-content:flex-end;
+    align-items:center;
+  }
+  .muted{color:var(--muted)}
+  .spinner{
+    width:22px;height:22px;border-radius:50%;
+    border:3px solid rgba(14,165,255,0.14);
+    border-top-color:var(--blue);
+    animation:spin 1s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .hint{font-size:13px;color:#0b1220;opacity:0.7}
+  .uploader-label{cursor:pointer}
+  .link {
+    font-size:13px;padding:8px 12px;border-radius:8px;background:transparent;border:1px dashed rgba(14,165,255,0.14);color:var(--blue-600)
+  }
+</style>
 </head>
 <body>
-  <div class="app">
-    <header>
+<div class="card" role="application" aria-label="AI Background Removal Tool">
+  <div class="header">
+    <div class="title">
+      <div class="logo">AI</div>
       <div>
         <h1>AI Background Removal</h1>
-        <p class="small">Upload a photo, remove its background with AI and replace it using a prompt, color or image.</p>
+        <p class="lead">Upload, remove background, replace background via prompt, preview and download — responsive UI.</p>
       </div>
-      <div class="small">Bright Blue · Mobile + Desktop Responsive</div>
-    </header>
-
-    <section class="panel preview">
-      <div style="width:100%">
-        <canvas id="outputCanvas" width="1200" height="800"></canvas>
-      </div>
-      <div class="meta" style="width:100%">
-        <div class="small">Preview</div>
-        <div style="display:flex;gap:8px">
-          <button id="downloadBtn" class="primary" disabled>Download PNG</button>
-          <button id="resetBtn" class="ghost">Reset</button>
-        </div>
-      </div>
-      <div style="width:100%" class="small">Tip: For best results use photos with a clear subject. This version can call your remote AI Studio / Banana app to perform background editing.</div>
-    </section>
-
-    <aside class="panel controls">
-      <div class="control-row">
-        <label class="file">Upload Image<input id="fileInput" type="file" accept="image/*"></label>
-        <div style="flex:1">
-          <div id="modelStatus" class="small">Ready to use (remote AI enabled)</div>
-          <div class="progress" style="margin-top:8px"><i id="modelProgress"></i></div>
-        </div>
-      </div>
-
-      <div>
-        <div class="small" style="margin-bottom:8px">Background options</div>
-        <div class="bg-options">
-          <div class="bg-chip" data-type="transparent">Transparent</div>
-          <div class="bg-chip" data-type="color" data-color="#ffffff">White</div>
-          <div class="bg-chip" data-type="color" data-color="#0ea5ff">Bright Blue</div>
-          <div class="bg-chip" data-type="image" id="uploadBgChip">Upload Bg</div>
-        </div>
-      </div>
-
-      <div>
-        <div class="small">Prompt generator — type a short prompt for the background and click Generate</div>
-        <div style="display:flex;gap:8px;margin-top:8px">
-          <input id="promptInput" type="text" placeholder="e.g. tropical beach at sunset, soft bokeh" />
-          <button id="generateBtn" class="primary">Generate</button>
-        </div>
-        <div class="small" style="margin-top:8px">Generated backgrounds use a public image source (Unsplash). If you want a custom background, upload one using 'Upload Bg'.</div>
-      </div>
-
-      <div>
-        <div style="display:flex;gap:8px;margin-top:8px">
-          <button id="removeBtn" class="primary" disabled>Remove Background (AI Studio)</button>
-          <button id="simpleBtn" class="ghost">Simple Remove</button>
-        </div>
-      </div>
-
-      <div style="margin-top:6px" class="small">Remote AI endpoint: <code>https://banana-photo-editor-610210776917.us-west1.run.app/</code></div>
-
-      <input id="bgFileInput" type="file" accept="image/*" style="display:none">
-    </aside>
-
-    <footer class="small">Built with &lt;canvas&gt; · Remote AI Studio integration available. Ensure your remote app allows CORS from your domain.</footer>
+    </div>
+    <div class="controls">
+      <button class="btn" id="clearAllBtn" title="Clear images">Clear</button>
+      <button class="btn secondary" id="docsBtn" title="How to use">How it works</button>
+    </div>
   </div>
 
-  <!-- Scripts -->
-  <script>
-    // Elements
-    const fileInput = document.getElementById('fileInput');
-    const outputCanvas = document.getElementById('outputCanvas');
-    const ctx = outputCanvas.getContext('2d');
-    const removeBtn = document.getElementById('removeBtn');
-    const simpleBtn = document.getElementById('simpleBtn');
-    const downloadBtn = document.getElementById('downloadBtn');
-    const resetBtn = document.getElementById('resetBtn');
-    const modelStatus = document.getElementById('modelStatus');
-    const modelProgress = document.getElementById('modelProgress');
-    const bgChips = document.querySelectorAll('.bg-chip');
-    const promptInput = document.getElementById('promptInput');
-    const generateBtn = document.getElementById('generateBtn');
-    const bgFileInput = document.getElementById('bgFileInput');
-    const uploadBgChip = document.getElementById('uploadBgChip');
+  <div class="layout">
+    <!-- Left: input + options -->
+    <div class="panel" aria-hidden="false">
+      <div class="dropzone" id="dropzone" tabindex="0">
+        <div style="text-align:center">
+          <strong>Drag & drop image</strong>
+          <div class="muted">or</div>
+        </div>
+        <label class="uploader-label link" for="fileInput">Choose an image</label>
+        <input id="fileInput" type="file" accept="image/*" style="display:none">
+        <div class="meta">Supported: PNG, JPG, JPEG. Max: 10MB.</div>
+      </div>
 
-    // Your remote AI Studio / Banana endpoint
-    const REMOTE_AI_URL = 'https://banana-photo-editor-610210776917.us-west1.run.app/';
+      <div class="options">
+        <div class="small">Background replacement (choose):</div>
+        <select id="bgMode" class="input" aria-label="Background mode">
+          <option value="transparent">Keep Transparent (default)</option>
+          <option value="color">Solid color</option>
+          <option value="upload">Upload background image</option>
+          <option value="remote">Use remote AI (prompt)</option>
+        </select>
 
-    let originalImage = null;
-    let selectedBg = {type:'transparent', color:'#ffffff', image: null};
+        <div id="colorControls" style="display:none" class="color-picker">
+          <input id="bgColor" class="input" type="color" value="#ffffff" title="Pick background color">
+          <div class="small">Pick color</div>
+        </div>
 
-    function setProgress(p){ modelProgress.style.width = Math.round(p*100)+'%'; }
+        <div id="uploadBgControls" style="display:none" class="flex">
+          <label class="link" for="bgFile">Upload BG</label>
+          <input id="bgFile" type="file" accept="image/*" style="display:none">
+        </div>
+      </div>
 
-    function resetCanvas(){
-      ctx.clearRect(0,0,outputCanvas.width,outputCanvas.height);
-      if(originalImage){
-        drawImageToCanvas(originalImage, outputCanvas, ctx);
-      }
-      downloadBtn.disabled = true;
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div class="small">Prompt generator (used only for remote AI)</div>
+        <textarea id="prompt" placeholder="E.g. 'replace background with a soft bokeh sunset, cinematic'"></textarea>
+        <div class="controls-row">
+          <div class="flex">
+            <input id="resizeToggle" type="checkbox" checked> <label for="resizeToggle" class="small" style="margin-left:6px">Resize large image to 1024px for faster processing</label>
+          </div>
+          <div class="flex">
+            <button class="btn" id="removeBtn">Remove Background</button>
+            <button class="btn secondary" id="naiveBtn">Quick Remove (client)</button>
+          </div>
+        </div>
+        <div class="small muted">Tip: For best results with complex images, set up a remote AI endpoint and choose "Use remote AI (prompt)".</div>
+      </div>
+    </div>
+
+    <!-- Right: previews -->
+    <div class="preview-panel">
+      <div class="controls-row">
+        <div class="small">Original / Edited preview</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="btn secondary" id="zoomBtn">Fit</button>
+          <button class="btn" id="downloadBtn">Download</button>
+        </div>
+      </div>
+
+      <div class="preview" id="previewBox" aria-live="polite" aria-atomic="true">
+        <div id="placeholder" style="text-align:center">
+          <div style="font-weight:600;color:var(--blue)">No image loaded</div>
+          <div class="muted">Upload an image to begin</div>
+        </div>
+        <!-- canvases inserted here dynamically -->
+      </div>
+
+      <div style="display:flex;gap:8px;align-items:center;justify-content:space-between">
+        <div class="bg-samples">
+          <div class="small">Quick backgrounds:</div>
+          <div class="sample" data-color="#ffffff" style="background:#ffffff"></div>
+          <div class="sample" data-color="#000000" style="background:#000000"></div>
+          <div class="sample" data-color="#f8fafc" style="background:#f8fafc"></div>
+          <div class="sample" data-color="#fde68a" style="background:#fde68a"></div>
+        </div>
+        <div class="small muted" id="status">Idle</div>
+      </div>
+      <div class="footer">
+        <div class="muted small">Built-in client remove is basic; remote AI recommended for best quality.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/*
+  AI Background Removal Tool
+  - Set BACKEND_URL to your remote AI service (optional).
+  - If left empty, the page uses a simple client-side background-removal heuristic.
+  - Remote service contract (recommended):
+      POST to BACKEND_URL with FormData { image: File, prompt: string (optional) }
+      Response: image binary (image/png or image/jpeg). The client will treat response as blob.
+*/
+
+const BACKEND_URL = ""; 
+// Example: const BACKEND_URL = "https://banana-photo-editor-610210776917.us-west1.run.app/"; 
+// If you want to integrate with your Google AI Studio app, paste its endpoint URL here.
+
+const maxSize = 1024; // client-side resize when checkbox checked
+const fileInput = document.getElementById('fileInput');
+const bgFile = document.getElementById('bgFile');
+const dropzone = document.getElementById('dropzone');
+const removedBtn = document.getElementById('removeBtn');
+const naiveBtn = document.getElementById('naiveBtn');
+const previewBox = document.getElementById('previewBox');
+const placeholder = document.getElementById('placeholder');
+const bgMode = document.getElementById('bgMode');
+const colorControls = document.getElementById('colorControls');
+const uploadBgControls = document.getElementById('uploadBgControls');
+const bgColor = document.getElementById('bgColor');
+const promptInput = document.getElementById('prompt');
+const statusEl = document.getElementById('status');
+const downloadBtn = document.getElementById('downloadBtn');
+const clearAllBtn = document.getElementById('clearAllBtn');
+const docsBtn = document.getElementById('docsBtn');
+
+let originalImage = null; // HTMLImageElement
+let editedCanvas = null; // canvas element for edited
+let uploadedBgImage = null;
+
+// Utility: set status
+function setStatus(text, busy=false){
+  statusEl.textContent = text;
+  if (busy) statusEl.classList.add('busy'); else statusEl.classList.remove('busy');
+}
+
+// Drag-drop
+dropzone.addEventListener('dragover', (e)=>{ e.preventDefault(); dropzone.classList.add('dragover'); });
+dropzone.addEventListener('dragleave', ()=>dropzone.classList.remove('dragover'));
+dropzone.addEventListener('drop', (e)=>{ e.preventDefault(); dropzone.classList.remove('dragover'); const f = e.dataTransfer.files?.[0]; if(f) handleFile(f); });
+
+document.querySelector('.uploader-label').addEventListener('click', ()=> fileInput.click());
+fileInput.addEventListener('change', (e)=>{ const f = e.target.files?.[0]; if(f) handleFile(f); });
+
+bgFile.addEventListener('change', async (e)=>{ const f = e.target.files?.[0]; if(f) { uploadedBgImage = await createImageFromFile(f); applyCurrentBackground(); }});
+
+bgMode.addEventListener('change', ()=>{
+  const v = bgMode.value;
+  colorControls.style.display = v === 'color' ? 'flex' : 'none';
+  uploadBgControls.style.display = v === 'upload' ? 'flex' : 'none';
+});
+
+naiveBtn.addEventListener('click', ()=> {
+  if(!originalImage) return alert('Upload an image first.');
+  setStatus('Removing background (client)...', true);
+  setTimeout(async ()=>{
+    try{
+      const result = await naiveRemoveBackground(originalImage);
+      showEdited(result);
+      setStatus('Client removal done');
+    }catch(err){
+      console.error(err);
+      alert('Error during client removal: '+err.message);
+      setStatus('Error');
     }
+  }, 50);
+});
 
-    function drawImageToCanvas(img, canvas, ctx){
-      const maxW = canvas.width;
-      const maxH = canvas.height;
-      let iw = img.naturalWidth || img.width;
-      let ih = img.naturalHeight || img.height;
-      const scale = Math.min(maxW/iw, maxH/ih);
-      const w = iw * scale;
-      const h = ih * scale;
-      const x = (maxW - w)/2;
-      const y = (maxH - h)/2;
-      ctx.clearRect(0,0,canvas.width,canvas.height);
-      ctx.drawImage(img, x, y, w, h);
+removedBtn.addEventListener('click', async ()=>{
+  if(!originalImage) return alert('Upload an image first.');
+  const mode = bgMode.value;
+  if(mode === 'remote'){
+    if(!BACKEND_URL) return alert('No BACKEND_URL configured. Set BACKEND_URL variable in the script to your AI endpoint.');
+    setStatus('Sending to remote AI...', true);
+    try{
+      const blob = await sendToRemoteAI(originalImage, promptInput.value);
+      const img = await createImageFromBlob(blob);
+      showEdited(img, true);
+      setStatus('Remote AI finished');
+    }catch(err){
+      console.error(err);
+      alert('Remote AI error: '+ (err.message || err));
+      setStatus('Error');
     }
-
-    fileInput.addEventListener('change', (e)=>{
-      const f = e.target.files[0];
-      if(!f) return;
-      const img = new Image();
-      img.onload = ()=>{
-        originalImage = img;
-        drawImageToCanvas(img, outputCanvas, ctx);
-        downloadBtn.disabled = false;
-        removeBtn.disabled = false;
-      }
-      img.src = URL.createObjectURL(f);
-    });
-
-    bgChips.forEach(chip=>{
-      chip.addEventListener('click', ()=>{
-        bgChips.forEach(c=>c.classList.remove('selected'));
-        chip.classList.add('selected');
-        const type = chip.dataset.type;
-        if(type === 'transparent') selectedBg = {type:'transparent', color: null, image: null};
-        else if(type === 'color') selectedBg = {type:'color', color: chip.dataset.color, image: null};
-        else if(type === 'image'){
-          bgFileInput.click();
-        }
-      })
-    });
-
-    bgFileInput.addEventListener('change', (e)=>{
-      const f = e.target.files[0]; if(!f) return;
-      const img = new Image();
-      img.onload = ()=>{
-        selectedBg = {type:'image', image: img};
-        applyCurrentMask();
-      }
-      img.src = URL.createObjectURL(f);
-    });
-
-    // Generate background via prompt using Unsplash Source
-    generateBtn.addEventListener('click', ()=>{
-      const q = (promptInput.value||'').trim();
-      if(!q) return alert('Please enter a prompt like "tropical beach" or "soft bokeh"');
-      const url = 'https://source.unsplash.com/1600x900/?' + encodeURIComponent(q) + '&' + Date.now();
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      img.onload = ()=>{
-        selectedBg = {type:'image', image: img};
-        applyCurrentMask();
-      }
-      img.onerror = ()=>alert('Failed to load generated background. Try another prompt.');
-      img.src = url;
-    });
-
-    // Remove background by calling remote AI Studio / Banana app
-    removeBtn.addEventListener('click', async ()=>{
-      if(!originalImage) return alert('Please upload an image first');
-      modelStatus.textContent = 'Preparing image for remote AI...';
-      setProgress(0.1);
-
-      // draw original into a temporary canvas at full display size
-      const temp = document.createElement('canvas'); temp.width = outputCanvas.width; temp.height = outputCanvas.height;
-      const tctx = temp.getContext('2d');
-      drawImageToCanvas(originalImage, temp, tctx);
-      // get PNG data URL
-      const dataURL = temp.toDataURL('image/png');
-
-      // Prepare payload
-      const payload = {
-        image: dataURL,
-        prompt: promptInput.value || '',
-        background: (selectedBg.type === 'color') ? {type:'color', color:selectedBg.color} : (selectedBg.type === 'transparent' ? {type:'transparent'} : {type:'image'}),
-      };
-
-      try{
-        modelStatus.textContent = 'Sending to remote AI...';
-        setProgress(0.3);
-        const res = await fetch(REMOTE_AI_URL, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(payload)
-        });
-        setProgress(0.6);
-        if(!res.ok){
-          const txt = await res.text();
-          throw new Error('Remote AI responded with status '+res.status+': '+txt);
-        }
-        // expecting JSON like { image: 'data:image/png;base64,...' } or {result: 'base64...'}
-        const data = await res.json();
-        let imgSrc = null;
-        if(data.image && typeof data.image === 'string') imgSrc = data.image;
-        else if(data.result && typeof data.result === 'string'){
-          // if it's raw base64 without data URL prefix
-          imgSrc = data.result.startsWith('data:') ? data.result : ('data:image/png;base64,' + data.result);
-        } else {
-          throw new Error('Unexpected response format from remote AI');
-        }
-
-        // draw returned image
-        const outImg = new Image();
-        outImg.onload = ()=>{
-          // draw full-cover
-          ctx.clearRect(0,0,outputCanvas.width,outputCanvas.height);
-          ctx.drawImage(outImg, 0, 0, outputCanvas.width, outputCanvas.height);
-          downloadBtn.disabled = false;
-          modelStatus.textContent = 'Remote AI edit complete';
-          setProgress(1);
-        };
-        outImg.onerror = ()=>{
-          throw new Error('Failed to load image returned from remote AI');
-        };
-        outImg.src = imgSrc;
-      }catch(err){
-        console.error(err);
-        alert('Remote AI failed: '+err.message + '
-Check CORS or endpoint availability.');
-        modelStatus.textContent = 'Remote AI failed';
-        setProgress(0);
-      }
-    });
-
-    // Simple remove: naive threshold based on background color of corners
-    simpleBtn.addEventListener('click', ()=>{
-      if(!originalImage) return alert('Please upload an image first');
-      const temp = document.createElement('canvas'); temp.width = outputCanvas.width; temp.height = outputCanvas.height;
-      const tctx = temp.getContext('2d');
-      drawImageToCanvas(originalImage, temp, tctx);
-      const imgData = tctx.getImageData(0,0,temp.width,temp.height);
-      function sampleCorner(x,y,w,h){
-        const data = imgData.data; let r=0,g=0,b=0,c=0;
-        for(let yy=y; yy<y+h; yy+=5){
-          for(let xx=x; xx<x+w; xx+=5){
-            const idx = (yy*temp.width + xx)*4; r+=data[idx]; g+=data[idx+1]; b+=data[idx+2]; c++;
-          }
-        }
-        return [Math.round(r/c),Math.round(g/c),Math.round(b/c)];
-      }
-      const c1 = sampleCorner(0,0,40,40);
-      const thresh = 60;
-      const out = ctx.createImageData(temp.width,temp.height);
-      for(let i=0;i<imgData.data.length;i+=4){
-        const dr = imgData.data[i]-c1[0];
-        const dg = imgData.data[i+1]-c1[1];
-        const db = imgData.data[i+2]-c1[2];
-        const dist = Math.sqrt(dr*dr+dg*dg+db*db);
-        if(dist > thresh){
-          out.data[i]=imgData.data[i]; out.data[i+1]=imgData.data[i+1]; out.data[i+2]=imgData.data[i+2]; out.data[i+3]=255;
-        }else{ out.data[i+3]=0; }
-      }
-      // draw background then subject
-      (async ()=>{
-        // draw background
-        if(selectedBg.type === 'transparent'){
-          const s = 20; for(let y=0;y<outputCanvas.height;y+=s){
-            for(let x=0;x<outputCanvas.width;x+=s){
-              const isLight = ((x/s|0) + (y/s|0)) % 2 === 0;
-              ctx.fillStyle = isLight ? '#f0f7fb' : '#e1eff8';
-              ctx.fillRect(x,y,s,s);
-            }
-          }
-        } else if(selectedBg.type === 'color'){
-          ctx.fillStyle = selectedBg.color || '#ffffff';
-          ctx.fillRect(0,0,outputCanvas.width,outputCanvas.height);
-        } else if(selectedBg.type === 'image' && selectedBg.image){
-          const bg = selectedBg.image;
-          const iw = bg.naturalWidth || bg.width;
-          const ih = bg.naturalHeight || bg.height;
-          const scale = Math.max(outputCanvas.width/iw, outputCanvas.height/ih);
-          const w = iw*scale; const h = ih*scale; const x = (outputCanvas.width-w)/2; const y = (outputCanvas.height-h)/2;
-          ctx.drawImage(bg, x, y, w, h);
-        } else { ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,outputCanvas.width,outputCanvas.height); }
-        ctx.putImageData(out, 0, 0);
-        downloadBtn.disabled = false;
-      })();
-    });
-
-    // applyCurrentMask (re-run remote if needed)
-    function applyCurrentMask(){
-      if(originalImage){
-        // prefer remote run to regenerate composite
-        // simulate click to call remote API
-        removeBtn.click();
-      } else { resetCanvas(); }
+  }else{
+    // local: do same as naive removal then apply replacement
+    setStatus('Removing background (client)...', true);
+    try{
+      const result = await naiveRemoveBackground(originalImage);
+      showEdited(result);
+      setStatus('Client removal done');
+    }catch(err){
+      console.error(err);
+      alert('Error: '+err.message);
+      setStatus('Error');
     }
+  }
+});
 
-    resetBtn.addEventListener('click', ()=>{
-      selectedBg = {type:'transparent', color:null, image:null};
-      bgChips.forEach(c=>c.classList.remove('selected'));
-      document.querySelector('.bg-chip[data-type="transparent"]').classList.add('selected');
-      resetCanvas();
-    });
-
-    downloadBtn.addEventListener('click', ()=>{
-      const link = document.createElement('a');
-      link.download = 'edited-image.png';
-      link.href = outputCanvas.toDataURL('image/png');
+downloadBtn.addEventListener('click', () =>{
+  if(!editedCanvas) return alert('No edited image to download.');
+  const mode = bgMode.value;
+  // download PNG (transparent) or flattened with color/upload bg if selected
+  if(mode === 'transparent' || mode === 'remote' || mode === 'color' || mode === 'upload'){
+    const link = document.createElement('a');
+    link.download = 'edited-image.png';
+    editedCanvas.toBlob((blob)=>{
+      link.href = URL.createObjectURL(blob);
       link.click();
-    });
+      URL.revokeObjectURL(link.href);
+    }, 'image/png');
+  }else{
+    alert('Unknown mode.');
+  }
+});
 
-    function resizeCanvasToDisplaySize(){
-      const ratio = window.devicePixelRatio || 1;
-      const container = outputCanvas.parentElement;
-      const w = Math.min(1200, Math.max(400, container.clientWidth));
-      const h = Math.min(900, Math.max(300, Math.round(window.innerHeight * 0.45)));
-      outputCanvas.width = Math.round(w);
-      outputCanvas.height = Math.round(h);
-      if(originalImage) drawImageToCanvas(originalImage, outputCanvas, ctx);
+clearAllBtn.addEventListener('click', ()=> {
+  originalImage = null;
+  editedCanvas = null;
+  uploadedBgImage = null;
+  previewBox.innerHTML = '';
+  previewBox.appendChild(placeholder);
+  fileInput.value = '';
+  bgFile.value = '';
+  promptInput.value = '';
+  setStatus('Idle');
+});
+
+// docs
+docsBtn.addEventListener('click', ()=> {
+  alert(
+`How it works:
+1) Upload an image.
+2) Choose background replacement mode.
+   - Transparent: removes background and leaves transparency.
+   - Color: selects a solid color.
+   - Upload: upload an image to use as background.
+   - Remote: sends image + prompt to your AI endpoint (requires BACKEND_URL).
+3) Click "Quick Remove (client)" for an instant heuristic removal, or "Remove Background" to use the selected mode (remote if chosen).
+4) Preview and download the result (PNG).`
+  );
+});
+
+// helper: create image element from file
+function createImageFromFile(file){
+  return new Promise((resolve, reject)=>{
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
+    img.onerror = (e)=>{ URL.revokeObjectURL(url); reject(new Error('Invalid image')); };
+    img.src = url;
+  });
+}
+function createImageFromBlob(blob){
+  return new Promise((resolve, reject)=>{
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.onload = ()=>{ URL.revokeObjectURL(url); resolve(img); };
+    img.onerror = (e)=>{ URL.revokeObjectURL(url); reject(new Error('Invalid returned image')); };
+    img.src = url;
+  });
+}
+
+async function handleFile(file){
+  if(!file.type.startsWith('image/')) return alert('Please upload an image file.');
+  if(file.size > 12 * 1024 * 1024) return alert('Please upload images smaller than 12MB.');
+  setStatus('Loading image...');
+  // optionally resize
+  const shouldResize = document.getElementById('resizeToggle').checked;
+  let img = await createImageFromFile(file);
+  if(shouldResize){
+    img = await resizeImageElement(img, maxSize);
+  }
+  originalImage = img;
+  showOriginal(img);
+  setStatus('Image loaded');
+}
+
+// show original preview and clear edited
+function showOriginal(img){
+  previewBox.innerHTML = '';
+  const wrapper = document.createElement('div');
+  wrapper.style.display = 'flex';
+  wrapper.style.flexDirection = 'column';
+  wrapper.style.alignItems = 'center';
+  wrapper.style.gap = '8px';
+  const label = document.createElement('div');
+  label.className = 'small muted';
+  label.textContent = 'Original';
+  const cv = document.createElement('canvas');
+  cv.className = 'canvas';
+  drawImageToCanvas(img, cv);
+  wrapper.appendChild(label);
+  wrapper.appendChild(cv);
+  previewBox.appendChild(wrapper);
+  // clear edited canvas
+  editedCanvas = null;
+}
+
+// show edited result (img can be HTMLImageElement or canvas)
+function showEdited(result, isImageElement=false){
+  previewBox.innerHTML = '';
+  const container = document.createElement('div');
+  container.style.display = 'flex';
+  container.style.flexDirection = 'column';
+  container.style.alignItems = 'center';
+  container.style.gap = '8px';
+  const label = document.createElement('div');
+  label.className = 'small muted';
+  label.textContent = 'Edited';
+  let cv;
+  if(result instanceof HTMLCanvasElement){
+    cv = result;
+  }else if(result instanceof HTMLImageElement){
+    cv = document.createElement('canvas');
+    drawImageToCanvas(result, cv);
+  }else{
+    // assume blob?
+    cv = document.createElement('canvas');
+  }
+  cv.className = 'canvas';
+  // apply background mode: color or uploaded bg if asked
+  if(bgMode.value === 'color'){
+    const color = bgColor.value || '#ffffff';
+    // flatten onto color
+    const final = flattenCanvasWithColor(cv, color);
+    editedCanvas = final;
+  }else if(bgMode.value === 'upload' && uploadedBgImage){
+    const final = flattenCanvasWithImage(cv, uploadedBgImage);
+    editedCanvas = final;
+  }else{
+    // keep as-is (transparent)
+    editedCanvas = cv;
+  }
+
+  container.appendChild(label);
+  container.appendChild(editedCanvas);
+  previewBox.appendChild(container);
+}
+
+// draw img to canvas maintaining aspect ratio and fit into preview box area
+function drawImageToCanvas(img, canvas){
+  const maxW = Math.min(img.width, 900);
+  const maxH = Math.min(img.height, 700);
+  const ratio = Math.min(maxW / img.width, maxH / img.height, 1);
+  canvas.width = Math.round(img.width * ratio);
+  canvas.height = Math.round(img.height * ratio);
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.drawImage(img, 0,0, canvas.width, canvas.height);
+}
+
+// flatten canvas with color
+function flattenCanvasWithColor(sourceCanvas, color){
+  const out = document.createElement('canvas');
+  out.width = sourceCanvas.width;
+  out.height = sourceCanvas.height;
+  const ctx = out.getContext('2d');
+  ctx.fillStyle = color;
+  ctx.fillRect(0,0,out.width, out.height);
+  ctx.drawImage(sourceCanvas, 0,0);
+  return out;
+}
+
+// flatten canvas with background image (cover)
+function flattenCanvasWithImage(sourceCanvas, bgImg){
+  const out = document.createElement('canvas');
+  out.width = sourceCanvas.width;
+  out.height = sourceCanvas.height;
+  const ctx = out.getContext('2d');
+
+  // compute cover scaling for bgImg to fill out
+  const rw = out.width / bgImg.width;
+  const rh = out.height / bgImg.height;
+  const scale = Math.max(rw, rh);
+  const bw = bgImg.width * scale;
+  const bh = bgImg.height * scale;
+  const bx = (out.width - bw) / 2;
+  const by = (out.height - bh) / 2;
+
+  ctx.drawImage(bgImg, bx, by, bw, bh);
+  ctx.drawImage(sourceCanvas, 0,0);
+  return out;
+}
+
+// naive background removal: basic flood-fill/color-key + alpha mask
+async function naiveRemoveBackground(img){
+  // draw image fullsize to canvas (but limit)
+  const canvas = document.createElement('canvas');
+  const maxDim = 1200;
+  const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+  canvas.width = Math.round(img.width * scale);
+  canvas.height = Math.round(img.height * scale);
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(img, 0,0, canvas.width, canvas.height);
+
+  const imageData = ctx.getImageData(0,0, canvas.width, canvas.height);
+  const data = imageData.data;
+
+  // sample border pixels to estimate background color (simple average)
+  const sampleCount = 200;
+  let sum = [0,0,0];
+  let count = 0;
+  for(let i=0;i<sampleCount;i++){
+    // pick random border location (top / bottom / left / right)
+    const side = i % 4;
+    let x, y;
+    if(side===0){ x = Math.floor(Math.random()*canvas.width); y = 0; }
+    else if(side===1){ x = Math.floor(Math.random()*canvas.width); y = canvas.height-1; }
+    else if(side===2){ x = 0; y = Math.floor(Math.random()*canvas.height); }
+    else { x = canvas.width-1; y = Math.floor(Math.random()*canvas.height); }
+    const idx = (y*canvas.width + x)*4;
+    sum[0]+=data[idx]; sum[1]+=data[idx+1]; sum[2]+=data[idx+2];
+    count++;
+  }
+  const avgBg = sum.map(s=>s/count);
+
+  // compute mask by color distance to avgBg
+  const threshold = 60; // lower => stricter
+  for(let y=0;y<canvas.height;y++){
+    for(let x=0;x<canvas.width;x++){
+      const idx = (y*canvas.width + x)*4;
+      const r = data[idx], g = data[idx+1], b = data[idx+2];
+      const dist = Math.sqrt((r-avgBg[0])**2 + (g-avgBg[1])**2 + (b-avgBg[2])**2);
+      if(dist < threshold){
+        // fade out background pixels (alpha 0)
+        data[idx+3] = 0;
+      } else {
+        // keep full alpha
+        // optionally refine: slightly anti-alias near edges
+      }
     }
-    window.addEventListener('resize', ()=>{ resizeCanvasToDisplaySize(); });
-    resizeCanvasToDisplaySize();
+  }
+  ctx.putImageData(imageData, 0,0);
 
-    document.querySelector('.bg-chip[data-type="transparent"]').classList.add('selected');
-  </script>
+  // return the canvas with transparency
+  return canvas;
+}
+
+// resizing helper (returns HTMLImageElement)
+function resizeImageElement(img, maxSide){
+  return new Promise((resolve) => {
+    const ratio = Math.min(1, maxSide / Math.max(img.width, img.height));
+    if(ratio === 1) return resolve(img);
+    const c = document.createElement('canvas');
+    c.width = Math.round(img.width * ratio);
+    c.height = Math.round(img.height * ratio);
+    const ctx = c.getContext('2d');
+    ctx.drawImage(img,0,0,c.width,c.height);
+    c.toBlob((blob)=>{
+      const newImg = new Image();
+      const url = URL.createObjectURL(blob);
+      newImg.onload = ()=>{ URL.revokeObjectURL(url); resolve(newImg); };
+      newImg.src = url;
+    }, 'image/png');
+  });
+}
+
+// send to remote AI backend: POST FormData { image, prompt }
+// expects binary image back
+async function sendToRemoteAI(imgElement, prompt){
+  // convert canvas to blob first
+  const canvas = document.createElement('canvas');
+  canvas.width = imgElement.width;
+  canvas.height = imgElement.height;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(imgElement, 0,0);
+  const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+  const fd = new FormData();
+  fd.append('image', blob, 'input.png');
+  fd.append('prompt', prompt || '');
+
+  // make the POST
+  const resp = await fetch(BACKEND_URL, {
+    method:'POST',
+    body: fd,
+  });
+  if(!resp.ok) throw new Error('Remote AI returned: ' + resp.status + ' ' + resp.statusText);
+  const outBlob = await resp.blob();
+  return outBlob;
+}
+
+// create image element from blob (used when remote returns processed image)
+async function createImageFromBlob(blob){
+  return new Promise((resolve, reject)=>{
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.onload = ()=>{ URL.revokeObjectURL(url); resolve(img); };
+    img.onerror = ()=>{ URL.revokeObjectURL(url); reject(new Error('Failed to load returned image')); };
+    img.src = url;
+  });
+}
+
+// Utility: fit button (noop for now)
+document.getElementById('zoomBtn').addEventListener('click', ()=>{
+  // In browser, image already fits. Could implement zoom later.
+  alert('Preview is auto-fit. You can download the final image.');
+});
+
+// quick sample background color click
+document.querySelectorAll('.sample').forEach(el=>{
+  el.addEventListener('click', ()=> {
+    const color = el.dataset.color;
+    bgColor.value = color;
+    if(bgMode.value !== 'color'){
+      bgMode.value = 'color';
+      colorControls.style.display = 'flex';
+      uploadBgControls.style.display = 'none';
+    }
+    // if edited canvas present, re-apply flatten
+    applyCurrentBackground();
+  });
+});
+
+function applyCurrentBackground(){
+  if(!editedCanvas) return;
+  if(bgMode.value === 'color'){
+    const final = flattenCanvasWithColor(editedCanvas, bgColor.value);
+    editedCanvas = final;
+    // re-render
+    previewBox.querySelector('.canvas').replaceWith(final);
+  }else if(bgMode.value === 'upload' && uploadedBgImage){
+    const final = flattenCanvasWithImage(editedCanvas, uploadedBgImage);
+    editedCanvas = final;
+    previewBox.querySelector('.canvas').replaceWith(final);
+  }else if(bgMode.value === 'transparent'){
+    // nothing
+  }
+}
+
+/* Simple helper for testing without a backend:
+   If you want to use your Google AI Studio app:
+   1) Set BACKEND_URL variable at top to your endpoint (e.g. "https://.../predict").
+   2) Ensure your service accepts multipart/form-data with fields:
+        - image (file)
+        - prompt (text)
+      and responds with binary image data (PNG/JPEG).
+*/
+
+</script>
 </body>
 </html>
